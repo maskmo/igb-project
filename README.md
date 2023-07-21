@@ -1,10 +1,10 @@
 ---
 title: Milestone3
-emoji: 😁
+emoji: 🚀
 colorFrom: blue
 colorTo: purple
 sdk: streamlit
-sdk_version: string
+sdk_version: 1.24.0
 app_file: app.py
 pinned: false
 ---
