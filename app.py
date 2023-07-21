@@ -72,7 +72,7 @@ name_list_train = ['MSSubClass',
  'MoSold',
  'YrSold']
 
-data = pd.read_csv('/Users/max/Downloads/house-prices-advanced-regression-techniques/train.csv')
+data = pd.read_csv('./house-prices-advanced-regression-techniques/train.csv')
 
 
 data = data[name_list_train].values
