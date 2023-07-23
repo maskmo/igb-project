@@ -1,10 +1,9 @@
 
-
-
+# import necessary libraries for importing, running and displaying model predictions with user inputs
+import shap
 import streamlit as st
 import pandas as pd
 import numpy as np
-import tensorflow as tf
 
 from sklearn.preprocessing import MinMaxScaler
 
@@ -15,28 +14,19 @@ import pickle
 from pickle import dump
 from pickle import load
 
-# dump(scaler, open('scaler.pkl', 'wb'))
-
-#scaler = load(open('scaler.pkl', 'rb'))
-
+# Necessary for user input data
 scaler = MinMaxScaler()
 
-
-
-tf.random.set_seed(42)
-
 np.random.seed(42)
-
-
+#set online display settings
 st.markdown("<body style ='color:#E2E0D9;'></body>", unsafe_allow_html=True)
-
 
 
 st.markdown("<h4 style='text-align: center; color: #1B9E91;'>House Price Prediction in Ames, Iowa</h4>", unsafe_allow_html=True)
 
 st.markdown("<h5 style='text-align: center; color: #1B9E91;'>House price predictions using random forest regression, with displays of shap weights to assess importance of quantitative variables.</h5>", unsafe_allow_html=True)
 
-
+#create input list of user data for qualitative display and quanititative input
 name_list = [
     'MSSubClass',
     'LotFrontage',
@@ -115,13 +105,14 @@ name_list_train = [
     'YrSold'
     ]
 
-data = pd.read_csv('./house-prices/train.csv')
+#import training data
+data_input = pd.read_csv('./house-prices/train.csv')
 
-
+#defining input list of values
 data = data[name_list_train].values
 
 scaler.fit(data)
-
+#description for user comprehension
 description_list = [
     'What is the building class?',
     'What is the Overall material and finish quality?',
@@ -161,7 +152,7 @@ description_list = [
     'What is the approximate dollar value of unique features?'
  ]
 
-
+#ranges of inputs available to user
 
 min_list = [20.0,
     1.0,
@@ -239,6 +230,7 @@ max_list = [190.0,
 
 count = 0
 
+#creating UI for input data
 with st.sidebar:
 
     for i in range(len(name_list)):
@@ -252,7 +244,7 @@ with st.sidebar:
 
     
 
-
+#creating object populated by user inputs
 data_df_obj = {
 
 'MSSubClass': [MSSubClass],
@@ -295,31 +287,22 @@ data_df_obj = {
 
 }
 
+#converting the user input dictionairy to dataframe
 data_df = pd.DataFrame.from_dict(data_df_obj)
 
-
+#importing random forest regressor from pickle
 with open('model_pickle', 'rb') as f:
     model = pickle.load(f)
 
 
-# negloglik = lambda y, p_y: -p_y.log_prob(y) # note this
 
-# model1 = tf.keras.models.load_model('model_files/my_keras_model1.h5')
-
-# model1 = tf.keras.models.Sequential(model1.layers[:5])
-
-# data_df = pd.DataFrame.from_dict(data_df)
-
-# data_df_normal = scaler.transform(data_df)
-
+#generating the prediction based on user input
 pred = model.predict(data_df)
 
-# model2 = tf.keras.models.load_model('model_files/keras_2.h5',compile=False)
-
-# yhat = model2(latent_var)
 
 
 
+#creating UI instances
 col1, col2, col3 , col4, col5 = st.columns(5)
 
 with col1:
@@ -333,13 +316,23 @@ with col5:
 with col3 :
     center_button = st.button('Calculate range of house price')
 
+#creating shap values and metrics to be displayed
+sv = explainer(data_df)
+
+exp = Explanation(sv.values,
+                  sv.base_values[0][0],
+                  data=data_df.values,
+                  feature_names=num_col)
+
+explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(data_df)
 
 
+#creating user input button when finished inputting data to generate predictions and shap visuals
 if center_button:
 
     import time
 
-    #my_bar = st.progress(0)
 
     with st.spinner('Calculating....'):
         time.sleep(2)
@@ -354,8 +347,8 @@ if center_button:
     lower_number = "{:,.2f}".format(int(pred-17496.299733333333))
     higher_number = "{:,.2f}".format(int(pred+17496.299733333333))
 
-    col1, col2, col3 = st.columns(3)
-
+    col1, col2, col3= st.columns(3)
+    
     
 
     with col1:
@@ -366,23 +359,17 @@ if center_button:
         st.subheader("       AND ")
 
         st.subheader(" USD "+str(higher_number))
-
+        st_shap(
+                    shap.force_plot(
+                        explainer.expected_value,
+                        shap_values[0,:],
+                        x_test[num_col].iloc[0,:],
+                        matplotlib=True
+                    ))
 
     with col3:
+
         st.write("")
 
-    
 
-    
 
-    # import base64
-
-    # # file_ = open("kramer_gif.gif", "rb")
-    # contents = file_.read()
-    # data_url = base64.b64encode(contents).decode("utf-8")
-    # file_.close()
-
-    # st.markdown(
-    #     f'<center><img src="data:image/gif;base64,{data_url}" alt="cat gif"></center>',
-    #     unsafe_allow_html=True,
-    # )
