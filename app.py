@@ -1,6 +1,9 @@
 
 # import necessary libraries for importing, running and displaying model predictions with user inputs
 import shap
+from shap import TreeExplainer, Explanation
+from shap.plots import waterfall
+import streamlit.components.v1 as components
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -109,124 +112,54 @@ name_list_train = [
 data_input = pd.read_csv('./house-prices/train.csv')
 
 #defining input list of values
-data = data[name_list_train].values
+data = data_input[name_list_train].values
 
 scaler.fit(data)
 #description for user comprehension
 description_list = [
     'What is the building class?',
+    'How many linear feet of street connected to the property?',
+    'What is the lot size in square feet?',
     'What is the Overall material and finish quality?',
+    'What is the overall condition of the house from 1-10?',
     'In which year was the Original construction date?',
     'In which year was it remodelled?',
+    'What is the area of veneer and masonry in square feet?',
+    'What is the type 1 finished square feet?',
+    'What is the type 2 finished square feet?',
     'What is the Unfinished square feet of basement area?',
     'What is the Total square feet of basement area?',
     'What is the First Floor square feet?',
     'What is the Second floor square feet?',
-    'What is the Above grade (ground) living area square feet?',
-    'What is the number of full bathrooms?',
-    'What is the number of Half baths?',
-    'What is the number of  Total rooms above grade (does not include bathrooms)?',
-    'What is the number of fireplaces?',
-    'What is the garage capacity in car sizes?',
-    'What is the size of garage in square feet?',
-    'In which month was it sold?',
-    'In which year was it sold?',
-    'How many linear feet of street connected to the property?',
-    'What is the lot size in square feet?',
-    'What is the overall condition of the house from 1-10?',
-    'What is the area of veneer and masonry in square feet?',
-    'What is the type 1 finished square feet?',
-    'What is the type 2 finished square feet?',
     'What is the low quality finished square feet?',
+    'What is the Above grade (ground) living area square feet?',
     'What is the number of basement full baths?',
     'What is the number of basement half baths?',
+    'What is the number of full bathrooms?',
+    'What is the number of Half baths?',
     'What is the number of bedrooms above ground?',
     'What is the number of kitchens above grade?',
+    'What is the number of  Total rooms above grade (does not include bathrooms)?',
+    'What is the number of fireplaces?',
     'What is the year the garage build?',
+    'What is the garage capacity in car sizes?',
+    'What is the size of garage in square feet?',
     'What is the area of the wood deck in square feet?',
     'What is the open porch area in square feet?',
     'What is the enclosed porch area in square feet?',
     'What is the three season porch area in square feet?',
     'What is the screen porch area in square feet?',
     'What is the pool area in square feet?',
-    'What is the approximate dollar value of unique features?'
+    'What is the approximate dollar value of unique features?',
+    'In which month was it sold?',
+    'In which year was it sold?'
  ]
 
 #ranges of inputs available to user
 
-min_list = [20.0,
-    1.0,
-    1872.0,
-    1950.0,
-    0.0,
-    0.0,
-    334.0,
-    0.0,
-    334.0,
-    0.0,
-    0.0,
-    2.0,
-    0.0,
-    0.0,
-    0.0,
-    1.0,
-    2000.0,
-    20,
-    1000,
-    1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    1,
-    1900,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0]
+min_list = [20, 21.0, 1470, 1, 1, 1879, 1950, 0.0, 0.0, 0.0, 0.0, 0.0, 407, 0, 0, 407, 0.0, 0.0, 0, 0, 0, 0, 3, 0, 1895.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 1, 2006]
 
-max_list = [190.0,
- 10.0,
- 2010.0,
- 2010.0,
- 2336.0,
- 6110.0,
- 4692.0,
- 2065.0,
- 5642.0,
- 3.0,
- 2.0,
- 14.0,
- 3.0,
- 4.0,
- 1800.0,
- 12.0,
- 2020.0,
- 350,
- 250000,
- 10,
- 1900,
- 2400,
- 1200,
- 600,
- 3,
- 3,
- 6,
- 3,
- 2012,
- 900,
- 600,
- 600,
- 510,
- 500,
- 700,
- 2500]
+max_list = [190, 200.0, 56600, 10, 10, 2010, 2010, 1290.0, 4010.0, 1526.0, 2140.0, 5095.0, 5095, 1862, 1064, 5095, 3.0, 2.0, 4, 2, 6, 2, 15, 4, 2207.0, 5.0, 1488.0, 1424, 742, 1012, 360, 576, 800, 17000, 12, 2010]
 
 count = 0
 
@@ -291,7 +224,7 @@ data_df_obj = {
 data_df = pd.DataFrame.from_dict(data_df_obj)
 
 #importing random forest regressor from pickle
-with open('model_pickle', 'rb') as f:
+with open('model_pickle.pkl', 'rb') as f:
     model = pickle.load(f)
 
 
@@ -317,15 +250,21 @@ with col3 :
     center_button = st.button('Calculate range of house price')
 
 #creating shap values and metrics to be displayed
-sv = explainer(data_df)
+explainer = shap.TreeExplainer(model)
+sv = explainer(data)
 
 exp = Explanation(sv.values,
                   sv.base_values[0][0],
                   data=data_df.values,
-                  feature_names=num_col)
+                  feature_names=name_list_train)
 
-explainer = shap.TreeExplainer(model)
-shap_values = explainer.shap_values(data_df)
+shap_values = explainer.shap_values(data)
+
+
+#manually creating an st component that can write a shap graph on the app page
+def st_shap(plot, height=None):
+    shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
+    components.html(shap_html, height=height)
 
 
 #creating user input button when finished inputting data to generate predictions and shap visuals
@@ -360,12 +299,13 @@ if center_button:
 
         st.subheader(" USD "+str(higher_number))
         st_shap(
-                    shap.force_plot(
-                        explainer.expected_value,
-                        shap_values[0,:],
-                        x_test[num_col].iloc[0,:],
-                        matplotlib=True
-                    ))
+            shap.force_plot(
+                explainer.expected_value,
+                shap_values[0,:],
+                data_df[name_list_train].iloc[0,:],
+                matplotlib=False
+                )
+            )
 
     with col3:
 
